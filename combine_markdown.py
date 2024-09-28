@@ -73,16 +73,17 @@ def process_folder(folder_path, depth=1, item_order=None, include_all=False, kee
             elif item_name.endswith('.md') and os.path.isfile(item_path):
                 output.append(get_content_for_path(item_path, depth, custom_title))
 
-        if include_all:
-            all_items = sorted(os.listdir(folder_path))
-            for item in all_items:
-                if item not in processed_items:
-                    item_path = os.path.join(folder_path, item)
-                    if os.path.isdir(item_path):
-                        output.append(f"\n{'#' * (depth + 1)} {item}\n")
-                        output.extend(process_folder(item_path, depth + 1, None, include_all))
-                    elif item.endswith('.md') and os.path.isfile(item_path):
-                        output.append(get_content_for_path(item_path, depth))
+    if include_all:
+        all_items = sorted(os.listdir(folder_path))
+        for item in all_items:
+            if item not in processed_items:
+                item_path = os.path.join(folder_path, item)
+                if os.path.isdir(item_path):
+                    folder_title = item if keep_numbers else remove_leading_number(item)
+                    output.append(f"\n{'#' * (depth + 1)} {folder_title}\n")
+                    output.extend(process_folder(item_path, depth + 1, None, include_all))
+                elif item.endswith('.md') and os.path.isfile(item_path):
+                    output.append(get_content_for_path(item_path, depth))
 
     return output
 
@@ -97,10 +98,15 @@ def main():
     args = parser.parse_args()
     root_folder = args.path
     root_folder_name = os.path.basename(os.path.normpath(root_folder))
-    output_file = args.output or f"{root_folder_name}.md"
+    output = args.output
+    output_file = f"{root_folder_name}.md"
+
+    if output and os.path.exists(output):
+        output_file = os.path.join(output, output_file) if os.path.isdir(output) else output
 
     order_config = None
     item_order = None
+    include_all = args.all
     yaml_path = args.yaml or os.path.join(root_folder, 'order.yaml')
 
     if os.path.exists(yaml_path):
@@ -111,11 +117,13 @@ def main():
         item_order = order_config.get(root_folder_name)
         if item_order == None:
             item_order = order_config.get("root")
+    else:
+        include_all = True
 
     with open(output_file, 'w') as f:
         root_title = root_folder_name if args.keep_numbers else remove_leading_number(root_folder_name)
         f.write(f"# {root_title}\n")
-        f.writelines(process_folder(root_folder, item_order=item_order if order_config else None, include_all=args.all, keep_numbers=args.keep_numbers))
+        f.writelines(process_folder(root_folder, item_order=item_order if order_config else None, include_all=include_all, keep_numbers=args.keep_numbers))
 
 if __name__ == '__main__':
     main()
