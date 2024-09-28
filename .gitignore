@@ -1,2 +1,4 @@
 venv
 order
+__pycache__
+.DS_Store
