@@ -2,7 +2,7 @@ from run_combine_markdown import run_combine_markdown
 import os
 import argparse
 
-def process(category, item, source_type, process_all=False, recursive=False):
+def process(category, item, source_type, process_all=False, recursive=False, propagate=False):
     root = "/Users/philliprearick/Home-Local/Active/Personal/Writing/The Modular Five/Version 2"
     output_path = f"{root}/Combination"
     source_path = f"{root}/Source/{source_type}"
@@ -17,16 +17,21 @@ def process(category, item, source_type, process_all=False, recursive=False):
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
+    if propagate:
+        if item:
+            process(category, None, source_type, False, False, True)
+        elif category:
+            process(None, None, source_type, False, False, False)
+
     if process_all and not item:
         all_items = os.listdir(source_path)
         for sub_item in all_items:
             item_path = os.path.join(source_path, sub_item)
             if os.path.isdir(item_path):
                 if category:
-                    process(category, sub_item, source_type, False, recursive)
+                    process(category, sub_item, source_type, False, recursive, False)
                     continue
-                process(sub_item, None, source_type, recursive, recursive)
-
+                process(sub_item, None, source_type, recursive, recursive, False)
         if not recursive:
             return
 
@@ -45,11 +50,12 @@ def main():
     parser.add_argument("-i", "--item", help="Item")
     parser.add_argument("-a", "--all", action="store_true", help="Include all markdown files")
     parser.add_argument("-r", "--recursive", action="store_true", help="Include all markdown files, recursively")
+    parser.add_argument("-p", "--propagate", action="store_true", help="Propagate up ancestor tree")
     args = parser.parse_args()
 
     source_type = args.type if args.type else "Comprehensive Reference"
 
-    process(args.category, args.item, source_type, args.all, args.recursive)
+    process(args.category, args.item, source_type, args.all, args.recursive, args.propagate)
 
 if __name__ == '__main__':
     main()
