@@ -69,7 +69,7 @@ def process_folder(folder_path, depth=1, item_order=None, include_all=False, kee
                 if not keep_numbers:
                     folder_title = remove_leading_number(folder_title)
                 output.append(f"\n{'#' * (depth + 1)} {folder_title}\n")
-                output.extend(process_folder(item_path, depth + 1, sub_item_order))
+                output.extend(process_folder(item_path, depth + 1, sub_item_order, include_all=include_all, keep_numbers=keep_numbers))
             elif item_name.endswith('.md') and os.path.isfile(item_path):
                 output.append(get_content_for_path(item_path, depth, custom_title))
 
@@ -81,7 +81,7 @@ def process_folder(folder_path, depth=1, item_order=None, include_all=False, kee
                 if os.path.isdir(item_path):
                     folder_title = item if keep_numbers else remove_leading_number(item)
                     output.append(f"\n{'#' * (depth + 1)} {folder_title}\n")
-                    output.extend(process_folder(item_path, depth + 1, None, include_all))
+                    output.extend(process_folder(item_path, depth + 1, None, include_all=include_all, keep_numbers=keep_numbers))
                 elif item.endswith('.md') and os.path.isfile(item_path):
                     output.append(get_content_for_path(item_path, depth))
 
@@ -89,7 +89,8 @@ def process_folder(folder_path, depth=1, item_order=None, include_all=False, kee
 
 def compile_directory_to_file(root_folder, output, yaml_path=None, include_all=True, keep_numbers=False):
     root_folder_name = os.path.basename(os.path.normpath(root_folder))
-    output_file = f"{root_folder_name}.md"
+    root_title = root_folder_name if keep_numbers else remove_leading_number(root_folder_name)
+    output_file = f"{root_title}.md"
 
     if os.path.exists(output):
         output_file = os.path.join(output, output_file) if os.path.isdir(output) else output
@@ -110,7 +111,6 @@ def compile_directory_to_file(root_folder, output, yaml_path=None, include_all=T
         include = True
 
     with open(output_file, 'w') as f:
-        root_title = root_folder_name if keep_numbers else remove_leading_number(root_folder_name)
         f.write(f"# {root_title}\n")
         f.writelines(process_folder(root_folder, item_order=item_order if order_config else None, include_all=include, keep_numbers=keep_numbers))
 
@@ -146,7 +146,7 @@ def compile_all(source, output, recursive=False, yaml_path=None, include_all=Tru
         order_file = os.path.join(source_target_dir, "order.yaml")
         order_file = order_file if os.path.exists(order_file) else None
 
-    compile_directory_to_file(source_target_dir, output_target_dir, yaml_path=yaml_path, include_all=include_all, keep_numbers=keep_numbers)
+    compile_directory_to_file(source_target_dir, output_target_dir, yaml_path=order_file, include_all=include_all, keep_numbers=keep_numbers)
 
     if propagate:
         if source_target_dir != source_path:
@@ -169,7 +169,6 @@ def compile_all(source, output, recursive=False, yaml_path=None, include_all=Tru
             item_path = os.path.join(source_target_dir, item)
             if os.path.isdir(item_path):
                 item_rel_path = os.path.relpath(item_path, source_path)
-                print(item_rel_path)
                 compile_all(
                     source,
                     output,
