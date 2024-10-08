@@ -87,29 +87,18 @@ def process_folder(folder_path, depth=1, item_order=None, include_all=False, kee
 
     return output
 
-def main():
-    parser = argparse.ArgumentParser(description="Combine Markdown files from a folder hierarchy.")
-    parser.add_argument("path", help="Path to the root directory")
-    parser.add_argument("-o", "--output", help="Output file name (default: directory_name.md)")
-    parser.add_argument("-y", "--yaml", help="Path to the YAML order file (default: order.yaml in root directory)")
-    parser.add_argument("-a", "--all", action="store_true", help="Include all markdown files, even those not in the YAML file")
-    parser.add_argument("-k", "--keep-numbers", action="store_true", help="Keep leading numbers in titles")
-
-    args = parser.parse_args()
-    root_folder = args.path
+def compile_directory_to_file(root_folder, output, yaml_path=None, include_all=True, keep_numbers=False):
     root_folder_name = os.path.basename(os.path.normpath(root_folder))
-    output = args.output
     output_file = f"{root_folder_name}.md"
 
-    if output and os.path.exists(output):
+    if os.path.exists(output):
         output_file = os.path.join(output, output_file) if os.path.isdir(output) else output
 
     order_config = None
     item_order = None
-    include_all = args.all
-    yaml_path = args.yaml or os.path.join(root_folder, 'order.yaml')
+    include = include_all
 
-    if os.path.exists(yaml_path):
+    if yaml_path and os.path.exists(yaml_path):
         with open(yaml_path, 'r') as f:
             order_config = yaml.safe_load(f)
 
@@ -118,12 +107,135 @@ def main():
         if item_order == None:
             item_order = order_config.get("root")
     else:
-        include_all = True
+        include = True
 
     with open(output_file, 'w') as f:
-        root_title = root_folder_name if args.keep_numbers else remove_leading_number(root_folder_name)
+        root_title = root_folder_name if keep_numbers else remove_leading_number(root_folder_name)
         f.write(f"# {root_title}\n")
-        f.writelines(process_folder(root_folder, item_order=item_order if order_config else None, include_all=include_all, keep_numbers=args.keep_numbers))
+        f.writelines(process_folder(root_folder, item_order=item_order if order_config else None, include_all=include, keep_numbers=keep_numbers))
+
+def compile_all(source, output, recursive=False, yaml_path=None, include_all=True, keep_numbers=True, propagate=False, target=""):
+    source_target_dir = os.path.join(source, target)
+
+    if not os.path.exists(source_target_dir):
+        return
+
+    if not os.path.exists(output):
+        return
+
+    output_target_dir = os.path.join(output, target)
+
+    if not os.path.exists(output_target_dir) or not os.path.samefile(output, output_target_dir):
+        output_target_dir = os.path.dirname(output_target_dir)
+
+    source_target_dir = os.path.abspath(source_target_dir)
+    output_target_dir = os.path.abspath(output_target_dir)
+    source_path = os.path.abspath(source)
+    output_path = os.path.abspath(output)
+
+    if source_path not in os.path.commonpath([source_path, source_target_dir]):
+        source_target_dir = source_path
+
+    if output_path not in os.path.commonpath([output_path, output_target_dir]):
+        output_target_dir = output_path
+
+    os.makedirs(output_target_dir, exist_ok=True)
+
+    order_file = yaml_path
+    if yaml_path is None:
+        order_file = os.path.join(source_target_dir, "order.yaml")
+        order_file = order_file if os.path.exists(order_file) else None
+
+    compile_directory_to_file(source_target_dir, output_target_dir, yaml_path=yaml_path, include_all=include_all, keep_numbers=keep_numbers)
+
+    if propagate:
+        if source_target_dir != source_path:
+            new_target = os.path.dirname(source_target_dir)
+            compile_all(
+                source,
+                output,
+                recursive=False,
+                yaml_path=yaml_path,
+                include_all=include_all,
+                keep_numbers=keep_numbers,
+                propagate=propagate,
+                target=new_target
+            )
+
+        return
+
+    if recursive:
+        for item in os.listdir(source_target_dir):
+            item_path = os.path.join(source_target_dir, item)
+            if os.path.isdir(item_path):
+                item_rel_path = os.path.relpath(item_path, source_path)
+                print(item_rel_path)
+                compile_all(
+                    source,
+                    output,
+                    recursive=recursive,
+                    include_all=include_all,
+                    keep_numbers=keep_numbers,
+                    propagate=propagate,
+                    target=item_rel_path
+                )
+
+def main():
+    parser = argparse.ArgumentParser(description="Combine Markdown files from a folder hierarchy.")
+    parser.add_argument("-a", "--all", action="store_true", default=None, help="Include all markdown files, even those not in the YAML file")
+    parser.add_argument("-c", "--config", help="Path to the YAML config file (default: compile.yaml in source directory)")
+    parser.add_argument("-k", "--keep-numbers", action="store_true", default=None, help="Keep leading numbers in titles")
+    parser.add_argument("-o", "--output", help="Output directory name (default: ./compiled in source directory)")
+    parser.add_argument("-p", "--propagate", action="store_true", default=None, help="Propagate up to parent directories")
+    parser.add_argument("-r", "--recursive", action="store_true", default=None, help="Compile files recursively")
+    parser.add_argument("-s", "--source", help="Path to the source directory (default: current working directory)")
+    parser.add_argument("-t", "--target", help="Path to the target directory relative to source directory (default: './')")
+    parser.add_argument("-y", "--yaml", help="Path to the YAML order file (default: order.yaml in directory to compile)")
+
+    args = parser.parse_args()
+
+    include_all = args.all
+    keep_numbers = args.keep_numbers
+    output = args.output
+    recursive = args.recursive
+    source = args.source
+    yaml_path = args.yaml
+    propagate = args.propagate
+    target = args.target
+
+    config_path = args.config or "compile.yaml"
+    config = None
+    if os.path.exists(config_path):
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+
+    if config:
+        if "include_all" in config:
+            include_all = include_all if include_all else config.get("include_all")
+        if "keep_numbers" in config:
+            keep_numbers = keep_numbers if keep_numbers else config.get("keep_numbers")
+        if "output" in config:
+            output = output if output else config.get("output")
+        if "recursive" in config:
+            recursive = recursive if recursive else config.get("recursive")
+        if "source" in config:
+            source = source if source else config.get("source")
+        if "yaml_path" in config:
+            yaml_path = yaml_path if yaml_path else config.get("yaml_path")
+        if "propagate" in config:
+            propagate = propagate if propagate else config.get("propagate")
+        if "target" in config:
+            target = target if target else config.get("target")
+
+    include_all = True if include_all is None else include_all
+    keep_numbers = False if keep_numbers is None else keep_numbers
+    recursive = False if recursive is None else recursive
+    propagate = False if propagate is None else propagate
+    source = os.getcwd() if source is None else source
+    output = os.path.join(source, "compiled") if output is None else output
+    target = "" if target is None else target
+
+    compile_all(source, output, recursive=recursive, yaml_path=yaml_path, include_all=include_all, keep_numbers=keep_numbers, propagate=propagate, target=target)
 
 if __name__ == '__main__':
     main()
