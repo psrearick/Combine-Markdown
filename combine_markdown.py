@@ -65,11 +65,11 @@ def process_folder(folder_path, depth=1, item_order=None, include_all=False, kee
             processed_items.add(item_name)
 
             if os.path.isdir(item_path):
-                folder_title = custom_title or item_name
+                folder_title = custom_title or os.path.basename(item_path)
                 if not keep_numbers:
                     folder_title = remove_leading_number(folder_title)
                 output.append(f"\n{'#' * (depth + 1)} {folder_title}\n")
-                output.extend(process_folder(item_path, depth + 1, sub_item_order, include_all=include_all, keep_numbers=keep_numbers))
+                output.extend(process_folder(item_path, depth + 1, sub_item_order, include_all=(include_all or sub_item_order is None), keep_numbers=keep_numbers))
             elif item_name.endswith('.md') and os.path.isfile(item_path):
                 output.append(get_content_for_path(item_path, depth, custom_title))
 
@@ -79,7 +79,8 @@ def process_folder(folder_path, depth=1, item_order=None, include_all=False, kee
             if item not in processed_items:
                 item_path = os.path.join(folder_path, item)
                 if os.path.isdir(item_path):
-                    folder_title = item if keep_numbers else remove_leading_number(item)
+                    item_title = os.path.basename(item_path)
+                    folder_title = item_title if keep_numbers else remove_leading_number(item_title)
                     output.append(f"\n{'#' * (depth + 1)} {folder_title}\n")
                     output.extend(process_folder(item_path, depth + 1, None, include_all=include_all, keep_numbers=keep_numbers))
                 elif item.endswith('.md') and os.path.isfile(item_path):
