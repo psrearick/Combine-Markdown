@@ -87,10 +87,10 @@ def process_folder(folder_path, depth=1, item_order=None, include_all=False, kee
 
     return output
 
-def compile_directory_to_file(root_folder, output, yaml_path=None, include_all=True, keep_numbers=False):
+def compile_directory_to_file(root_folder, output, yaml_path=None, include_all=True, keep_numbers=False, output_name=None):
     root_folder_name = os.path.basename(os.path.normpath(root_folder))
     root_title = root_folder_name if keep_numbers else remove_leading_number(root_folder_name)
-    output_file = f"{root_title}.md"
+    output_file = f"{root_title}.md" if output_name is None else output_name
 
     if os.path.exists(output):
         output_file = os.path.join(output, output_file) if os.path.isdir(output) else output
@@ -105,8 +105,14 @@ def compile_directory_to_file(root_folder, output, yaml_path=None, include_all=T
 
     if order_config:
         item_order = order_config.get(root_folder_name)
-        if item_order == None:
+        if item_order is None:
             item_order = order_config.get("root")
+        if item_order is not None:
+            for item in item_order:
+                if "order" in item:
+                    item_order = item["order"]
+                if "title" in item:
+                    root_title = item["title"]
     else:
         include = True
 
@@ -119,6 +125,12 @@ def compile_all(source, output, recursive=False, yaml_path=None, include_all=Tru
 
     if not os.path.exists(source_target_dir):
         return
+
+    output_name = None
+
+    if not os.path.isdir(output):
+        output_name = os.path.basename(output)
+        output = os.path.dirname(output)
 
     if not os.path.exists(output):
         return
@@ -146,7 +158,7 @@ def compile_all(source, output, recursive=False, yaml_path=None, include_all=Tru
         order_file = os.path.join(source_target_dir, "order.yaml")
         order_file = order_file if os.path.exists(order_file) else None
 
-    compile_directory_to_file(source_target_dir, output_target_dir, yaml_path=order_file, include_all=include_all, keep_numbers=keep_numbers)
+    compile_directory_to_file(source_target_dir, output_target_dir, yaml_path=order_file, include_all=include_all, keep_numbers=keep_numbers, output_name=output_name)
 
     if propagate:
         if source_target_dir != source_path:
