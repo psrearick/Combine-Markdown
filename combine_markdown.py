@@ -122,7 +122,7 @@ def compile_directory_to_file(root_folder, output, yaml_path=None, include_all=T
         f.writelines(process_folder(root_folder, item_order=item_order if order_config else None, include_all=include, keep_numbers=keep_numbers))
 
 def compile_all(source, output, recursive=False, yaml_path=None, include_all=True, keep_numbers=True, propagate=False, target=""):
-    source_target_dir = os.path.join(source, target)
+    source_target_dir = os.path.normpath(os.path.join(source, target))
 
     if not os.path.exists(source_target_dir):
         return
@@ -181,7 +181,7 @@ def compile_all(source, output, recursive=False, yaml_path=None, include_all=Tru
         for item in os.listdir(source_target_dir):
             item_path = os.path.join(source_target_dir, item)
             if os.path.isdir(item_path):
-                end_compile = os.path.join(item_path, ".end_compile")
+                end_compile = os.path.join(os.path.dirname(item_path), ".end_compile")
                 should_continue = not os.path.exists(end_compile)
                 item_rel_path = os.path.relpath(item_path, source_path)
                 compile_all(
@@ -248,6 +248,7 @@ def main():
     source = os.getcwd() if source is None else source
     output = os.path.join(source, "compiled") if output is None else output
     target = "" if target is None else target
+    target = os.path.normpath(target)
 
     compile_all(source, output, recursive=recursive, yaml_path=yaml_path, include_all=include_all, keep_numbers=keep_numbers, propagate=propagate, target=target)
 
