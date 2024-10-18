@@ -1,0 +1,6 @@
+/Users/philliprearick/dev/combine-markdown/symbols_test/symbols' sub2?
+/Users/philliprearick/dev/combine-markdown/symbols_test/symbols' sub2?/a file?.txt
+/Users/philliprearick/dev/combine-markdown/symbols_test/symbols_sub_1
+/Users/philliprearick/dev/combine-markdown/symbols_test/symbols_sub_1/a "file".txt
+/Users/philliprearick/dev/combine-markdown/symbols_test/symbols_sub_1/l2
+/Users/philliprearick/dev/combine-markdown/symbols_test/symbols_sub_1/l2/l2_file.txt
