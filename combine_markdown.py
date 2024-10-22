@@ -28,8 +28,13 @@ def get_content_for_path(item_path, depth = 1, custom_title=None, keep_numbers=F
         new_title = remove_leading_number(new_title)
 
     new_title = substitute_title(new_title, mod_config) if mod_config else new_title
+    new_title_header = f"# {new_title}"
+
+    if os.path.exists(os.path.join(os.path.dirname(item_path), ".no-headings")):
+        new_title_header = "* * *"
+
     content = re.sub(r'^# .+\n', '', content, count=1, flags=re.MULTILINE)
-    content = f"# {new_title}\n\n{content.strip()}\n"
+    content = f"{new_title_header}\n\n{content.strip()}\n"
 
     for i in range(6, 0, -1):
         search_pattern = rf'^{"#" * i} (.+)$'
@@ -95,6 +100,9 @@ def process_folder(folder_path, depth=1, item_order=None, include_all=False, kee
                     output.extend(process_folder(item_path, depth + 1, None, include_all=include_all, keep_numbers=keep_numbers, mod_config=mod_config))
                 elif item.endswith('.md') and os.path.isfile(item_path):
                     output.append(get_content_for_path(item_path, depth, keep_numbers=keep_numbers, mod_config=mod_config))
+
+    if output[0].startswith("\n* * *\n\n"):
+        output[0] = output[0][7:]
 
     return output
 
