@@ -101,7 +101,7 @@ def process_folder(folder_path, depth=1, item_order=None, include_all=False, kee
                 elif item.endswith('.md') and os.path.isfile(item_path):
                     output.append(get_content_for_path(item_path, depth, keep_numbers=keep_numbers, mod_config=mod_config))
 
-    if output[0].startswith("\n* * *\n\n"):
+    if len(output) > 0 and output[0].startswith("\n* * *\n\n"):
         output[0] = output[0][7:]
 
     return output
