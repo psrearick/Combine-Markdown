@@ -1,8 +1,9 @@
 import os
 import re
 import sys
+import argparse
 
-def rename_files(directory):
+def rename_files(directory, start):
     """Renames files and subdirectories in a given directory with sequential numbers."""
 
     entries = os.listdir(directory)
@@ -10,7 +11,7 @@ def rename_files(directory):
 
     for i, entry in enumerate(entries):
         old_path = os.path.join(directory, entry)
-        new_name = f"{str(i + 1).zfill(2)} {re.sub(r'^[\d.\s]+', '', entry)}"  # Strip and add numbering
+        new_name = f"{str(i + start).zfill(2)} {re.sub(r'^[\d.\s]+', '', entry)}"  # Strip and add numbering
         new_path = os.path.join(directory, new_name)
 
         try:
@@ -20,14 +21,13 @@ def rename_files(directory):
             print(f"Error renaming {entry}: {e}")
 
 if __name__ == "__main__":
-    if len(sys.argv) > 2:
-        print("Usage: python number_directory.py [directory_path]")
+    parser = argparse.ArgumentParser(description="Renames files and subdirectories in a given directory with sequential numbers")
+    parser.add_argument("-p", "--path", help="Path to directory to rename (default: './')", type=str, default=".")
+    parser.add_argument("-s", "--start", help="Starting Number (default: 1)", default=1, type=int)
+    args = parser.parse_args()
+
+    if not os.path.isdir(args.path):
+        print(f"Error: '{args.path}' is not a valid directory.")
         sys.exit(1)
 
-    target_directory = sys.argv[1] if len(sys.argv) == 2 else "."  # Default to current directory
-
-    if not os.path.isdir(target_directory):
-        print(f"Error: '{target_directory}' is not a valid directory.")
-        sys.exit(1)
-
-    rename_files(target_directory)
+    rename_files(args.path, args.start)
