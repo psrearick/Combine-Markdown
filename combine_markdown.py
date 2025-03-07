@@ -12,9 +12,19 @@ def substitute_title(title, mod_config):
 
     return title if substitution is None else substitution
 
-def get_content_for_path(item_path, depth = 1, custom_title=None, keep_numbers=False, mod_config=None):
+def get_content_for_path(item_path, depth=1, custom_title=None, keep_numbers=False, mod_config=None):
     with open(item_path, 'r') as f:
         content = f.read()
+
+    frontmatter_content = ""
+
+    frontmatter_pattern = r'^---\n(.*?)\n---\n'
+    frontmatter_match = re.match(frontmatter_pattern, content, re.DOTALL)
+    if frontmatter_match:
+        frontmatter_content = f"## Metadata\n\n{frontmatter_match.group(1).strip()}" + "\n\n"
+        content = content[frontmatter_match.end():].strip()
+    else:
+        content = content.strip()
 
     existing_title_match = re.match(r'^# (.+)$', content, re.MULTILINE)
 
@@ -34,7 +44,7 @@ def get_content_for_path(item_path, depth = 1, custom_title=None, keep_numbers=F
         new_title_header = "* * *"
 
     content = re.sub(r'^# .+\n', '', content, count=1, flags=re.MULTILINE)
-    content = f"{new_title_header}\n\n{content.strip()}\n"
+    content = f"{new_title_header}\n\n{frontmatter_content}{content.strip()}\n"
 
     for i in range(6, 0, -1):
         search_pattern = rf'^{"#" * i} (.+)$'
